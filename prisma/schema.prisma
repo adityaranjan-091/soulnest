@@ -1,0 +1,192 @@
+// ============================================================================
+// SoulNest — Prisma Schema
+// "Where deep stories find a home"
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Enums
+// ──────────────────────────────────────────────────────────────────────────────
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum MoodTag {
+  REFLECTIVE
+  UPLIFTING
+  VULNERABLE
+  DEEP_DIVE
+}
+
+enum ReactionType {
+  TOUCHED_SOUL
+  MADE_ME_THINK
+  RAINY_DAY_BOOKMARK
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// User
+// ──────────────────────────────────────────────────────────────────────────────
+
+model User {
+  id          String   @id @default(cuid())
+  username    String   @unique
+  email       String   @unique
+  displayName String
+  bio         String?
+  avatarUrl   String?
+  socialLinks Json?    // { twitter: "...", github: "...", website: "..." }
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  posts      Post[]
+  comments   Comment[]
+  reactions  Reaction[]
+  highlights Highlight[]
+  nests      Nest[]      @relation("NestMembers")
+
+  @@map("users")
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Post
+// ──────────────────────────────────────────────────────────────────────────────
+
+model Post {
+  id            String     @id @default(cuid())
+  title         String
+  slug          String     @unique
+  content       Json       // Structured TipTap/ProseMirror JSON for the editor
+  contentHtml   String     // Pre-rendered HTML for fast SSR reads
+  excerpt       String?    // Auto-generated or manual summary
+  coverImageUrl String?
+  readingTime   Int        @default(0) // Estimated minutes
+  status        PostStatus @default(DRAFT)
+  moodTag       MoodTag    @default(REFLECTIVE)
+  featured      Boolean    @default(false)
+
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId String
+
+  nest   Nest?   @relation(fields: [nestId], references: [id], onDelete: SetNull)
+  nestId String?
+
+  comments   Comment[]
+  reactions  Reaction[]
+  highlights Highlight[]
+
+  @@index([status, publishedAt])
+  @@map("posts")
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Nest (topic communities)
+// ──────────────────────────────────────────────────────────────────────────────
+
+model Nest {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  slug        String  @unique
+  description String?
+  iconUrl     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  posts   Post[]
+  members User[] @relation("NestMembers")
+
+  @@map("nests")
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Reaction (soulful alternatives to generic likes)
+// ──────────────────────────────────────────────────────────────────────────────
+
+model Reaction {
+  id   String       @id @default(cuid())
+  type ReactionType
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId String
+
+  // One reaction per type per user per post
+  @@unique([userId, postId, type])
+  @@map("reactions")
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Highlight (text snippets saved to a reader's personal Soulbook)
+// ──────────────────────────────────────────────────────────────────────────────
+
+model Highlight {
+  id          String @id @default(cuid())
+  text        String // The highlighted text snippet
+  note        String? // Optional personal annotation
+  startOffset Int    // Character offset start in contentHtml
+  endOffset   Int    // Character offset end in contentHtml
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId String
+
+  @@index([userId, postId])
+  @@map("highlights")
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Comment (supports nested replies via self-referential parentId)
+// ──────────────────────────────────────────────────────────────────────────────
+
+model Comment {
+  id   String @id @default(cuid())
+  body String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId String
+
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId String
+
+  // Self-referential for nested replies
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  parentId String?
+  replies  Comment[] @relation("CommentReplies")
+
+  @@index([postId, createdAt])
+  @@map("comments")
+}
