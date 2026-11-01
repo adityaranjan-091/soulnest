@@ -1,7 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Clock, Calendar, Sparkles } from "lucide-react";
+import { ArrowLeft, Clock, Calendar } from "lucide-react";
 import { getPostBySlug } from "@/actions/posts";
 import { ReactionsBar } from "@/components/story/ReactionsBar";
 import { HighlightPopover } from "@/components/story/HighlightPopover";

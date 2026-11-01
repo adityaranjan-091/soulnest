@@ -95,3 +95,4 @@ export async function getUserHighlights(userId: string) {
     return [];
   }
 }
+

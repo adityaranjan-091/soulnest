@@ -10,7 +10,7 @@ import {
   Trash2,
   Lock,
   ArrowRight,
-  Sparkles,
+  Loader2,
   PenLine,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -185,8 +185,15 @@ export default function SoulbookPage() {
         })}
       </div>
 
-      {/* Tab 1: Saved Stories */}
-      {activeTab === "bookmarks" && (
+      {/* Content Area */}
+      {isLoadingData ? (
+        <div className="flex items-center justify-center py-20 text-[var(--accent-sage)]">
+          <Loader2 className="w-8 h-8 animate-spin" />
+        </div>
+      ) : (
+        <>
+          {/* Tab 1: Saved Stories */}
+          {activeTab === "bookmarks" && (
         <div className="space-y-4">
           {bookmarks.length === 0 ? (
             <div className="text-center py-16 rounded-3xl border border-dashed border-[var(--border-strong)] bg-[var(--bg-secondary)]/30">
@@ -341,6 +348,8 @@ export default function SoulbookPage() {
             ))
           )}
         </div>
+      )}
+        </>
       )}
     </main>
   );

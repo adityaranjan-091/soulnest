@@ -96,3 +96,4 @@ export async function getUserBookmarks(userId: string) {
     return [];
   }
 }
+

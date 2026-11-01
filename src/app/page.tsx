@@ -3,7 +3,6 @@ import Link from "next/link";
 import {
   Sparkles,
   Heart,
-  Brain,
   Bookmark,
   Feather,
   Clock,
